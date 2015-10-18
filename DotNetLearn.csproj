@@ -55,6 +55,7 @@
     <Compile Include="alglib\solvers.cs" />
     <Compile Include="alglib\specialfunctions.cs" />
     <Compile Include="alglib\statistics.cs" />
+    <Compile Include="Markov\HiddenMarkovModel.cs" />
     <Compile Include="Math\Complex.cs" />
     <Compile Include="Data\Codebook.cs" />
     <Compile Include="Data\Sample.cs" />
