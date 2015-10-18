@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace DotNetLearn.Statistics
 {
   
-    class SimpleRNG
+    public class SimpleRNG
     {
         uint m_z = 4400;
         uint m_w = 3400;
@@ -26,6 +26,12 @@ namespace DotNetLearn.Statistics
             // The magic number below is 1/(2^32 + 2).
             // The result is strictly between 0 and 1.
             return (u + 1.0) * 2.328306435454494e-10;
+        }
+
+
+        public int Next(int max)
+        {
+            return (int)(GetUniform() * max);
         }
 
         public void SetSeeds(uint seed1, uint seed2)

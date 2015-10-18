@@ -56,7 +56,7 @@
     <Compile Include="alglib\specialfunctions.cs" />
     <Compile Include="alglib\statistics.cs" />
     <Compile Include="Markov\HiddenMarkovModel.cs" />
-    <Compile Include="Math\Complex.cs" />
+    <Compile Include="Mathematics\Complex.cs" />
     <Compile Include="Data\Codebook.cs" />
     <Compile Include="Data\Sample.cs" />
     <Compile Include="Data\SampleSet.cs" />
@@ -65,7 +65,8 @@
     <Compile Include="Markov\MarkovChain.cs" />
     <Compile Include="Markov\MarkovTable.cs" />
     <Compile Include="Markov\StaticRandom.cs" />
-    <Compile Include="Math\DFT.cs" />
+    <Compile Include="Mathematics\DFT.cs" />
+    <Compile Include="Mathematics\Matrix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Statistics\SimpleRNG.cs" />
   </ItemGroup>

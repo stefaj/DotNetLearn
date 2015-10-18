@@ -4,6 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
+// TODO
+// Fix underflows
+// Add additional learning technique
+// Support multiple observations training
+
 namespace DotNetLearn.Markov
 {
     public class HiddenMarkovModel
