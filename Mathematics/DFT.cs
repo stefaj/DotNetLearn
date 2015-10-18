@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace DFT_GRAYSCALE
+namespace DotNetLearn.Mathematics
 {
     public class DFT
     {

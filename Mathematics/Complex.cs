@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DFT_GRAYSCALE
+namespace DotNetLearn.Mathematics
 {
     public struct Complex
     {
