@@ -31,6 +31,81 @@ namespace DotNetLearn.Markov
             this.frequencyTable = new Dictionary<ChainState<T>, Dictionary<T, int>>();
         }
 
+        public T[] GetPossibleItemClasses()
+        {
+            Dictionary<T,int> dic = new Dictionary<T,int>();
+            
+            foreach(var freqs in frequencyTable.Values)
+            {
+                foreach (var k in freqs.Keys)
+                    dic[k] = 0;
+            }
+
+            return dic.Keys.ToArray();
+        }
+
+        public double EvaluateLogProbability(T[] observationSequence)
+        {
+             double logMinProb = Math.Log(0.000001);
+
+            double logProb = Math.Log(1);
+            var states = GetChainStates(observationSequence);
+            int j = this.Order;
+
+
+            foreach(var s in states)
+            {
+                var nextNote = observationSequence[j++];
+
+                if (j >= observationSequence.Length)
+                    break;
+
+                if(!frequencyTable.ContainsKey(s))
+                {
+                    logProb += logMinProb;
+                    continue;
+                }
+            
+                var freqs = frequencyTable[s];
+                double sum = 0;
+                int[] values = freqs.Values.ToArray();
+                for (int i = 0; i < values.Length; i++)
+                {
+                    sum += values[i];
+                }
+                if (!freqs.ContainsKey(nextNote))
+                    logProb += logMinProb;
+                else
+                    logProb += Math.Log(freqs[nextNote] / sum);
+            }
+
+            return logProb;
+
+        }
+
+        private ChainState<T>[] GetChainStates(T[] observationSequence)
+        {
+            List<ChainState<T>> states = new List<ChainState<T>>();
+
+            for(int i = this.Order; i < observationSequence.Length; i++)
+            {
+                T[] items = new T[this.Order];
+                for(int j = i - this.Order; j < i; j++)
+                {
+                    items[this.Order - (i - j)] = observationSequence[j];
+                }
+                ChainState<T> state = new ChainState<T>(items);
+                states.Add(state);
+            }
+            T[] items2 = new T[this.Order]; int k = 0;
+            for(int i = observationSequence.Length-this.Order; i < observationSequence.Length; i++)
+            {
+                items2[k++] = observationSequence[i];
+            }
+            states.Add(new ChainState<T>(items2));
+            return states.ToArray();
+        }
+
         public void Add(IEnumerable<T> items)
         {
             //int i = 0;
@@ -83,21 +158,21 @@ namespace DotNetLearn.Markov
         /// <param name="proportions">Weight of each item</param>
         /// <param name="rand">Uses own random if none is given</param>
         /// <returns></returns>
-        public static B RouletteSelection<B>(B[] items, float[] proportions, Random rand=null)
+        public static B RouletteSelection<B>(B[] items, double[] proportions, Random rand=null)
         {
      
             if (items.Length != proportions.Length)
                 throw new Exception("WTP length mismatch");
 
-            float total_freq = 0;
+            double total_freq = 0;
             foreach (var freq in proportions)
                 total_freq += freq;
 
             // Cumulative probabilities
-            float[] probabilities_cum = new float[proportions.Length];
+            double[] probabilities_cum = new double[proportions.Length];
             for (int i = 0; i < items.Length; i++ )
             {
-                float proportion = proportions[i] / total_freq;
+                double proportion = proportions[i] / total_freq;
 
                 if (i == 0)
                     probabilities_cum[i] = proportion;
@@ -105,9 +180,9 @@ namespace DotNetLearn.Markov
                     probabilities_cum[i] = probabilities_cum[i - 1] + proportion;
             }
 
-            float randomDouble = (float)(rand == null ? StaticRandom.NextDouble() : rand.NextDouble());
-            float random_prob = (float)(probabilities_cum[probabilities_cum.Length - 1] * randomDouble);
-            int index = Array.BinarySearch<float>(probabilities_cum, random_prob);
+            double randomDouble = (double)(rand == null ? StaticRandom.NextDouble() : rand.NextDouble());
+            double random_prob = (double)(probabilities_cum[probabilities_cum.Length - 1] * randomDouble);
+            int index = Array.BinarySearch<double>(probabilities_cum, random_prob);
             if (index < 0)
                 index = -(index + 1);
             if (index == items.Length)
@@ -155,7 +230,7 @@ namespace DotNetLearn.Markov
 
                 T[] words_arr = frequencyTable[item_key].Keys.ToArray();
 
-                float[] frequencies = new float[words_arr.Length];
+                double[] frequencies = new double[words_arr.Length];
 
                 int k = 0;
                 foreach (var next_word in words_arr)
