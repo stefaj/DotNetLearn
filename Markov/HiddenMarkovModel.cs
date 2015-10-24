@@ -25,13 +25,6 @@ namespace DotNetLearn.Markov
         double[,] logEmission;
         double[] logPi;
 
-
-
-        double[,] logAlpha;
-        double[,] logBeta;
-        double[,] logGamma;
-        double[, ,] logEta;
-
         //double[,] alpha;
         //double[,] beta;
         //double[, ,] digamma;
@@ -140,10 +133,11 @@ namespace DotNetLearn.Markov
         {
             int T = O.Length;
             Initialize(T);
-            LogSpaceForward(O);
-            LogSpaceBackward(O);
-            LogSpaceGamma(O);
-            return logGamma;
+            var alpha = LogSpaceForward(O);
+            var beta = LogSpaceBackward(O);
+            var gamma = LogSpaceGamma(O, alpha, beta);
+            return gamma;
+
         }
 
 
@@ -158,20 +152,20 @@ namespace DotNetLearn.Markov
             int M = observationSymbols;
 
 
-            logAlpha = new double[T, N];
-            logBeta = new double[T, N];
-            logEta = new double[T, N, N];
-            logGamma = new double[T, N];
+
+
 
         }
 
 
         // ln(a_t(i))
-        private void LogSpaceForward(int[] O)
+        private double[,] LogSpaceForward(int[] O)
         {
             int N = states;
             int M = observationSymbols;
             int T = O.Length;
+
+            var logAlpha = new double[T, N];
 
             #region Alpha Pass
 
@@ -201,17 +195,21 @@ namespace DotNetLearn.Markov
 
             }
 
+            return logAlpha;
+
             #endregion
 
         }
 
         // ln(b_t(i))
-        private void LogSpaceBackward(int[] O)
+        private double[,] LogSpaceBackward(int[] O)
         {
 
             int N = states;
             int M = observationSymbols;
             int T = O.Length;
+
+            var logBeta = new double[T, N];
 
             #region Beta Pass
 
@@ -242,13 +240,17 @@ namespace DotNetLearn.Markov
                 }
             }
             #endregion
+
+            return logBeta;
         }
 
-        private void LogSpaceGamma(int[] O)
+        private double[,] LogSpaceGamma(int[] O, double[,] logAlpha, double[,] logBeta)
         {
             int N = states;
             int M = observationSymbols;
             int T = O.Length;
+
+            var logGamma = new double[T, N];
 
             #region Calculating digamma and gamma
             for (int t = 0; t < T; t++)
@@ -267,14 +269,17 @@ namespace DotNetLearn.Markov
             }
 
             #endregion
+
+            return logGamma;
         }
 
-        private void LogSpaceEta(int[] O)
+        private double[, ,] LogSpaceEta(int[] O, double[,] logAlpha, double[,] logBeta)
         {
             int N = states;
             int M = observationSymbols;
             int T = O.Length;
 
+            var logEta = new double[T, N, N];
 
             #region Calculating digamma and gamma
             for (int t = 0; t < T - 1; t++)
@@ -307,22 +312,67 @@ namespace DotNetLearn.Markov
             }
 
             #endregion
+
+
+            return logEta;
         }
 
-        private void UpdateModel(int[] O)
+        private void UpdateModel(int[][] Obs)
         {
             int N = states;
             int M = observationSymbols;
-            int T = O.Length;
+
+            int K = Obs.GetLength(0);
+
+
+
+
+
+            Dictionary<int, double[,]> alphas = new Dictionary<int, double[,]>();
+            Dictionary<int, double[,]> betas = new Dictionary<int, double[,]>();
+            Dictionary<int, double[,]> gammas = new Dictionary<int, double[,]>();
+            Dictionary<int, double[, ,]> etas = new Dictionary<int, double[, ,]>();
+
+            for (int k = 0; k < K; k++)
+            {
+                int[] O = Obs[k];
+                int T = O.Length;
+
+                var logAlpha = LogSpaceForward(O);
+                var logBeta = LogSpaceBackward(O);
+                var logGamma = LogSpaceGamma(O, logAlpha, logBeta);
+                var logEta = LogSpaceEta(O, logAlpha, logBeta);
+
+                alphas[k] = logAlpha;
+                betas[k] = logBeta;
+                gammas[k] = logGamma;
+                etas[k] = logEta;
+            }
 
             #region Re-estimation of parameters
-            //re-estimate pi
+
+
+
+
+            // re-sestimate pi
+
+
+
             for (int i = 0; i < N; i++)
             {
-                //    pi[i] = gamma[0, i];
-                logPi[i] = logGamma[0, i];
-                // pi[i] = MathE.eexp(logGamma[0, i]);
+                double logpi = MathE.LOGZERO;
+                for (int k = 0; k < K; k++)
+                {
+
+                    var logGamma = gammas[k];
+                    int T = Obs[k].Length;
+
+                    logpi = MathE.elnsum(logpi, logGamma[0, i]);
+                }
+                logPi[i] = MathE.elnproduct(logpi, -K);
+
             }
+
 
 
             // re-estimate A
@@ -332,15 +382,20 @@ namespace DotNetLearn.Markov
                 {
                     double numer = MathE.LOGZERO;
                     double denom = MathE.LOGZERO;
-                    for (int t = 0; t < T - 1; t++)
+
+                    for (int k = 0; k < K; k++)
                     {
-                        numer = MathE.elnsum(numer, logEta[t, i, j]);
-                        denom = MathE.elnsum(denom, logGamma[t, i]);
+                        var logEta = etas[k];
+                        var logGamma = gammas[k];
+                        int T = Obs[k].Length;
+
+                        for (int t = 0; t < T - 1; t++)
+                        {
+                            numer = MathE.elnsum(numer, logEta[t, i, j]);
+                            denom = MathE.elnsum(denom, logGamma[t, i]);
+                        }
                     }
-
-                    //transition[i, j] = MathE.eexp(MathE.elnproduct(numer, -denom));
                     logTransition[i, j] = MathE.elnproduct(numer, -denom);
-
                 }
             }
 
@@ -349,26 +404,26 @@ namespace DotNetLearn.Markov
             // re-estimate B
             for (int j = 0; j < N; j++)
             {
-                for (int k = 0; k < M; k++)
+                for (int ki = 0; ki < M; ki++)
                 {
                     double numer = MathE.LOGZERO;
                     double denom = MathE.LOGZERO;
-
-                    for (int t = 0; t < T; t++)
+                    for (int k = 0; k < K; k++)
                     {
-                        if (O[t] == k)
+                        var logEta = etas[k];
+                        var logGamma = gammas[k];
+                        int T = Obs[k].Length;
+
+                        for (int t = 0; t < T; t++)
                         {
-                            numer = MathE.elnsum(numer, logGamma[t, j]);
-                            //numer += gamma[t, i];
+                            if (Obs[k][t] == ki)
+                            {
+                                numer = MathE.elnsum(numer, logGamma[t, j]);
+                            }
+                            denom = MathE.elnsum(denom, logGamma[t, j]);
                         }
-                        //denom += gamma[t, i];
-                        denom = MathE.elnsum(denom, logGamma[t, j]);
                     }
-
-                    //emission[i, j] = numer / denom;
-                    //emission[i,j] = MathE.eexp(MathE.elnproduct(numer, -denom));
-                    logEmission[j, k] = MathE.elnproduct(numer, -denom);
-
+                    logEmission[j, ki] = MathE.elnproduct(numer, -denom);
                 }
             }
 
@@ -376,30 +431,6 @@ namespace DotNetLearn.Markov
         }
 
 
-
-        private double EvaluateProb(int T)
-        {
-            int N = states;
-
-            double prob = 0;
-            for (int i = 0; i < N; i++)
-            {
-                prob += MathE.eexp(logAlpha[T - 1, i]);
-            }
-            return prob;
-        }
-
-        private double EvaluateLogProb(int T)
-        {
-            int N = states;
-
-            double prob = 0;
-            for (int i = 0; i < N; i++)
-            {
-                prob += MathE.eexp(logAlpha[T - 1, i]);
-            }
-            return prob;
-        }
 
 
 
@@ -414,10 +445,10 @@ namespace DotNetLearn.Markov
             int N = states;
 
             Initialize(T);
-            LogSpaceForward(O);
-            LogSpaceBackward(O);
-            LogSpaceGamma(O);
-            LogSpaceEta(O);
+            var logAlpha = LogSpaceForward(O);
+            var logBeta = LogSpaceBackward(O);
+            var logGamma = LogSpaceGamma(O, logAlpha, logBeta);
+            var logEta = LogSpaceEta(O, logAlpha, logBeta);
 
             double[] stateSeq = new double[T];
             for (int t = 0; t < T; t++)
@@ -439,17 +470,40 @@ namespace DotNetLearn.Markov
             return stateSeq;
         }
 
-        public double EvaluteProb(int[] O)
+        public double EvaluateProb(int[] O)
         {
-            LogSpaceForward(O);
-            return EvaluateProb(O.Length);
+            var alpha = LogSpaceForward(O);
+            return EvaluateProb(O.Length, alpha);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="O">Observation Sequence</param>
-        public void Train(int[] O)
+        private double EvaluateProb(int T, double[,] logAlpha)
+        {
+            int N = states;
+
+            double prob = 0;
+            for (int i = 0; i < N; i++)
+            {
+                prob += MathE.eexp(logAlpha[T - 1, i]);
+            }
+            return prob;
+        }
+
+        // Independence assumption
+        public double EvaluateProb(int[][] O)
+        {
+            int K = O.GetLength(0);
+            double prob = 1;
+
+            for (int k = 0; k < K; k++)
+            {
+                prob *= EvaluateProb(O[k]);
+            }
+
+            return prob;
+        }
+
+
+        public void Train(int[][] O)
         {
             int N = states;
             int M = observationSymbols;
@@ -465,14 +519,12 @@ namespace DotNetLearn.Markov
 
             for (int iter = 0; iter < MaxIterations; iter++)
             {
-                LogSpaceForward(O);
-                LogSpaceBackward(O);
-                LogSpaceGamma(O);
-                LogSpaceEta(O);
 
                 UpdateModel(O);
 
-                double logProb = EvaluateLogProb(T);
+                //double logProb = EvaluateLogProb(T);
+
+                double logProb = EvaluateProb(O);
 
                 if (oldLogProb > logProb && iter > MaxIterations / 2)
                     break;
@@ -483,7 +535,10 @@ namespace DotNetLearn.Markov
 
             }
 
+
+
         }
+
 
         public int[] PredictObservationSequence(int T)
         {
