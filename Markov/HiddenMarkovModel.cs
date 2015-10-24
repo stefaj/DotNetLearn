@@ -476,6 +476,12 @@ namespace DotNetLearn.Markov
             return EvaluateProb(O.Length, alpha);
         }
 
+        public double EvaluateLogProb(int[] O)
+        {
+            var alpha = LogSpaceForward(O);
+            return EvaluateLogProb(O.Length, alpha);
+        }
+
         private double EvaluateProb(int T, double[,] logAlpha)
         {
             int N = states;
@@ -488,6 +494,17 @@ namespace DotNetLearn.Markov
             return prob;
         }
 
+        private double EvaluateLogProb(int T, double[,] logAlpha)
+        {
+            int N = states;
+
+            double logProb = MathE.LOGZERO;
+            for (int i = 0; i < N; i++)
+                logProb = MathE.elnsum(logProb, logAlpha[T - 1, i]);
+
+            return logProb;
+        }
+
         // Independence assumption
         public double EvaluateProb(int[][] O)
         {
@@ -497,6 +514,19 @@ namespace DotNetLearn.Markov
             for (int k = 0; k < K; k++)
             {
                 prob *= EvaluateProb(O[k]);
+            }
+
+            return prob;
+        }
+
+        public double EvaluateLogProb(int[][] O)
+        {
+            int K = O.GetLength(0);
+            double prob = 1;
+
+            for (int k = 0; k < K; k++)
+            {
+                prob += EvaluateLogProb(O[k]);
             }
 
             return prob;
@@ -524,11 +554,11 @@ namespace DotNetLearn.Markov
 
                 //double logProb = EvaluateLogProb(T);
 
-                double logProb = EvaluateProb(O);
+                double logProb = EvaluateLogProb(O);
 
                 if (oldLogProb > logProb && iter > MaxIterations / 2)
                     break;
-                Console.WriteLine(logProb);
+                Console.WriteLine("{0}: {1}", iter, logProb);
 
                 oldLogProb = logProb;
 
