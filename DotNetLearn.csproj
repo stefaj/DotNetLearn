@@ -66,6 +66,7 @@
     <Compile Include="Markov\MarkovTable.cs" />
     <Compile Include="Markov\StaticRandom.cs" />
     <Compile Include="Mathematics\DFT.cs" />
+    <Compile Include="Mathematics\MathE.cs" />
     <Compile Include="Mathematics\Matrix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Statistics\SimpleRNG.cs" />
